@@ -1,0 +1,1 @@
+web: cd llm_assistant/backend && python main.py

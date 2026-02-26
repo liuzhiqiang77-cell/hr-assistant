@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能 HR 助手 - AI 问答</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            color: white;
+        }
+        
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 0.95rem;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 输入区域 */
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        .input-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .question-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .question-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .question-input::placeholder {
+            color: #aaa;
+        }
+        
+        .example-questions {
+            margin-top: 15px;
+        }
+        
+        .example-title {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .example-tag {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 5px;
+            background: #f0f4ff;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .example-tag:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 加载动画 */
+        .loading-section {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading-section.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 结果区域 */
+        .result-section {
+            display: none;
+        }
+        
+        .result-section.active {
+            display: block;
+        }
+        
+        .result-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .result-header h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .matched-skills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .skill-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        /* 回答内容 */
+        .answer-section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .answer-content {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            line-height: 1.8;
+            color: #444;
+        }
+        
+        .answer-content h3 {
+            color: #667eea;
+            margin: 20px 0 10px;
+        }
+        
+        .answer-content strong {
+            color: #667eea;
+        }
+        
+        /* TODO 清单 */
+        .todo-section {
+            margin-top: 30px;
+        }
+        
+        .todo-list {
+            list-style: none;
+        }
+        
+        .todo-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+        
+        .todo-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .todo-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .todo-checkbox.checked {
+            background: #667eea;
+        }
+        
+        .todo-checkbox.checked::after {
+            content: "✓";
+            color: white;
+            font-size: 14px;
+        }
+        
+        .todo-content {
+            flex: 1;
+        }
+        
+        .todo-text {
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .todo-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .priority {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        .priority-high {
+            background: #fee;
+            color: #c33;
+        }
+        
+        .priority-medium {
+            background: #ffeaa7;
+            color: #b7791f;
+        }
+        
+        .priority-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .time-badge {
+            color: #666;
+        }
+        
+        /* 操作按钮 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        .export-btn:hover {
+            opacity: 0.9;
+        }
+        
+        /* 提示信息 */
+        .tips-section {
+            background: #f0f4ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .tips-title {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .tips-list {
+            color: #666;
+            padding-left: 20px;
+        }
+        
+        .tips-list li {
+            margin: 8px 0;
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .main-card {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 智能 HR 助手</h1>
+            <p>输入您的管理问题，AI 自动匹配最佳 Skills 并生成行动清单</p>
+        </header>
+
+        <div class="main-card">
+            <div class="nav-links">
+                <a href="index.html">📚 浏览所有 Skills</a>
+                <span>|</span>
+                <a href="smart.html">🤖 智能问答</a>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="input-section" id="inputSection">
+                <label class="input-label">💬 描述您遇到的管理问题</label>
+                <textarea 
+                    class="question-input" 
+                    id="questionInput"
+                    placeholder="例如：
+• 我最近要面试一个技术候选人，他技术很强但沟通能力似乎一般，我该怎么评估？
+• 有个员工绩效突然下降，我该怎么跟他谈？
+• 新员工入职后如何帮助他快速融入团队？
+• 如何设计有效的绩效评估体系？"></textarea>
+                
+                <div class="example-questions">
+                    <div class="example-title">💡 点击快速填充示例问题：</div>
+                    <span class="example-tag" onclick="fillExample('如何给表现不佳的员工进行绩效面谈？')">绩效面谈</span>
+                    <span class="example-tag" onclick="fillExample('技术很强但沟通能力差的候选人，怎么评估是否录用？')">面试评估</span>
+                    <span class="example-tag" onclick="fillExample('一对一会议应该怎么准备和进行？')">一对一会议</span>
+                    <span class="example-tag" onclick="fillExample('员工提出离职，我该怎么挽留？')">员工保留</span>
+                    <span class="example-tag" onclick="fillExample('如何帮助团队成员规划职业发展？')">职业规划</span>
+                    <span class="example-tag" onclick="fillExample('新员工入职第一个月应该关注什么？')">新员工融入</span>
+                </div>
+                
+                <button class="submit-btn" onclick="submitQuestion()" id="submitBtn">
+                    🚀 获取专业建议和 TODO 清单
+                </button>
+            </div>
+
+            <!-- 加载中 -->
+            <div class="loading-section" id="loadingSection">
+                <div class="spinner"></div>
+                <p>🤔 正在分析问题并匹配相关的管理 Skills...</p>
+            </div>
+
+            <!-- 结果区域 -->
+            <div class="result-section" id="resultSection">
+                <div class="result-header">
+                    <h2>📋 基于您的问题，为您匹配了以下 Skills</h2>
+                    <div class="matched-skills" id="matchedSkills"></div>
+                </div>
+
+                <div class="answer-section">
+                    <h3 class="section-title">💡 专业建议</h3>
+                    <div class="answer-content" id="answerContent"></div>
+                </div>
+
+                <div class="todo-section">
+                    <h3 class="section-title">✅ 建议行动清单 (TODO)</h3>
+                    <ul class="todo-list" id="todoList"></ul>
+                </div>
+
+                <div class="tips-section">
+                    <div class="tips-title">📌 温馨提示</div>
+                    <ul class="tips-list">
+                        <li>点击 TODO 项前的方框可标记为已完成</li>
+                        <li>高优先级任务建议优先处理</li>
+                        <li>可在 Kimi CLI 中输入更复杂的问题获得深入指导</li>
+                    </ul>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="resetForm()">📝 新问题</button>
+                    <button class="action-btn export-btn" onclick="exportResult()">📥 导出结果</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let allSkills = [];
+        let currentResponse = null;
+
+        // 加载 Skills 数据
+        async function loadSkills() {
+            try {
+                const response = await fetch('data/skills.json');
+                allSkills = await response.json();
+                console.log(`已加载 ${allSkills.length} 个 Skills`);
+            } catch (error) {
+                console.error('加载失败:', error);
+                alert('数据加载失败，请检查 data/skills.json 是否存在');
+            }
+        }
+
+        // 填充示例问题
+        function fillExample(text) {
+            document.getElementById('questionInput').value = text;
+        }
+
+        // 分词
+        function tokenize(text) {
+            text = text.toLowerCase();
+            const englishWords = text.match(/\b[a-z]+\b/g) || [];
+            const chineseChars = text.match(/[\u4e00-\u9fff]{2,}/g) || [];
+            return [...englishWords, ...chineseChars];
+        }
+
+        // 简单的相似度计算
+        function calculateSimilarity(query, skill) {
+            const queryTokens = tokenize(query);
+            const skillText = `${skill.name} ${skill.description || ''} ${skill.body || ''}`;
+            const skillTokens = tokenize(skillText);
+            
+            // 计算 Jaccard 相似度 + 标题匹配加权
+            const querySet = new Set(queryTokens);
+            const skillSet = new Set(skillTokens);
+            
+            const intersection = new Set([...querySet].filter(x => skillSet.has(x)));
+            const union = new Set([...querySet, ...skillSet]);
+            
+            let score = intersection.size / (union.size || 1);
+            
+            // 标题匹配加权
+            const titleTokens = tokenize(skill.name);
+            const titleMatches = [...querySet].filter(x => titleTokens.includes(x)).length;
+            score += titleMatches * 0.3;
+            
+            // 关键词特殊匹配
+            const keywords = {
+                '面试': ['interview', 'candidate', 'hiring', '面试'],
+                '绩效': ['performance', 'review', '评估', '绩效'],
+                '晋升': ['promotion', 'career', '发展', '晋升'],
+                '离职': ['retention', '离职', '辞职'],
+                '一对一': ['one-on-one', '一对一', '1:1'],
+                '培训': ['training', '培训', 'teaching']
+            };
+            
+            for (const [key, words] of Object.entries(keywords)) {
+                if (query.includes(key)) {
+                    const hasKeyword = words.some(w => 
+                        skillText.toLowerCase().includes(w.toLowerCase())
+                    );
+                    if (hasKeyword) score += 0.5;
+                }
+            }
+            
+            return score;
+        }
+
+        // 匹配 Skills
+        function matchSkills(question, topK = 3) {
+            const scored = allSkills.map(skill => ({
+                skill,
+                score: calculateSimilarity(question, skill)
+            }));
+            
+            scored.sort((a, b) => b.score - a.score);
+            return scored.slice(0, topK).filter(s => s.score > 0);
+        }
+
+        // 生成 TODO 清单
+        function generateTodos(question) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('面试') || q.includes('candidate') || q.includes('招聘')) {
+                return [
+                    { task: '明确岗位需求和胜任力模型', priority: 'high', time: '面试前 1-2 天' },
+                    { task: '设计结构化面试问题（行为面试法）', priority: 'high', time: '面试前 1 天' },
+                    { task: '审阅候选人简历，标注疑点', priority: 'medium', time: '面试前 30 分钟' },
+                    { task: '进行面试，记录关键信息', priority: 'high', time: '面试中' },
+                    { task: '填写面试评估，与其他面试官对齐', priority: 'high', time: '面试后 24 小时内' }
+                ];
+            } else if (q.includes('绩效') || q.includes('performance')) {
+                return [
+                    { task: '收集员工绩效数据（产出、项目结果）', priority: 'high', time: '面谈前 1 周' },
+                    { task: '准备正面反馈和改进建议', priority: 'high', time: '面谈前 3 天' },
+                    { task: '预约一对一会议时间', priority: 'medium', time: '面谈前 1 周' },
+                    { task: '进行绩效面谈（倾听+反馈）', priority: 'high', time: '面谈中' },
+                    { task: '共同制定改进计划或发展目标', priority: 'high', time: '面谈中' }
+                ];
+            } else if (q.includes('一对一') || q.includes('one-on-one')) {
+                return [
+                    { task: '收集近期工作进展和障碍', priority: 'high', time: '会议前' },
+                    { task: '准备开放性问题清单', priority: 'medium', time: '会议前 15 分钟' },
+                    { task: '创建会议议程（员工主导+经理补充）', priority: 'medium', time: '会议前' },
+                    { task: '专注倾听，做笔记', priority: 'high', time: '会议中' },
+                    { task: '确定下一步行动和负责人', priority: 'high', time: '会议结束前' }
+                ];
+            } else if (q.includes('离职') || q.includes('retention') || q.includes('辞职')) {
+                return [
+                    { task: '安排离职面谈，了解真实原因', priority: 'high', time: '收到申请后 24 小时' },
+                    { task: '评估挽留的可能性和价值', priority: 'high', time: '离职面谈后' },
+                    { task: '如需挽留：准备 counter offer 或改进方案', priority: 'high', time: '2-3 天内' },
+                    { task: '启动知识转移和交接计划', priority: 'high', time: '确定离职日期后' }
+                ];
+            } else if (q.includes('晋升') || q.includes('promotion') || q.includes('发展')) {
+                return [
+                    { task: '评估员工当前能力 vs 目标职级要求', priority: 'high', time: '晋升讨论前' },
+                    { task: '收集 360 度反馈', priority: 'medium', time: '晋升讨论前 2 周' },
+                    { task: '与员工沟通职业发展意向', priority: 'high', time: '晋升讨论中' },
+                    { task: '识别能力差距和发展计划', priority: 'high', time: '晋升讨论中' },
+                    { task: '制定具体的成长路径和时间表', priority: 'high', time: '晋升讨论后' }
+                ];
+            } else {
+                return [
+                    { task: '深入理解当前问题的背景和具体情况', priority: 'high', time: '立即' },
+                    { task: '收集相关数据和信息', priority: 'high', time: '1-2 天内' },
+                    { task: '参考相关的管理 Skills 制定方案', priority: 'high', time: '分析后' },
+                    { task: '与相关方沟通并获得反馈', priority: 'medium', time: '方案制定后' },
+                    { task: '执行计划并跟踪效果', priority: 'high', time: '持续' }
+                ];
+            }
+        }
+
+        // 生成回答
+        function generateAnswer(question, matchedSkills) {
+            if (matchedSkills.length === 0) {
+                return "抱歉，没有找到高度相关的 Skills。建议您：\n\n1. 用更具体的关键词描述问题\n2. 或浏览 [Skills 列表](index.html) 手动查找\n3. 也可尝试在 Kimi CLI 中提问获得更智能的回答";
+            }
+
+            let answer = `基于您的问题，我为您找到了 ${matchedSkills.length} 个相关的管理 Skills：\n\n`;
+            
+            matchedSkills.forEach((item, i) => {
+                const s = item.skill;
+                const relevance = Math.min(100, Math.round(item.score * 50));
+                answer += `${i + 1}. **${s.name}** (相关度: ${relevance}%)\n`;
+                answer += `   ${s.description || '暂无描述'}\n\n`;
+            });
+
+            // 添加核心建议
+            const topSkill = matchedSkills[0].skill;
+            answer += `---\n\n### 💡 核心建议\n\n`;
+            
+            // 提取关键内容
+            const body = topSkill.body || '';
+            const paragraphs = body.split('\n\n').filter(p => p.trim().length > 30);
+            
+            if (paragraphs.length > 0) {
+                // 取最相关的前两段
+                answer += paragraphs.slice(0, 2).join('\n\n');
+            }
+
+            return answer;
+        }
+
+        // 提交问题
+        async function submitQuestion() {
+            const question = document.getElementById('questionInput').value.trim();
+            
+            if (!question) {
+                alert('请输入您的问题');
+                return;
+            }
+
+            // 显示加载中
+            document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('loadingSection').classList.add('active');
+
+            // 模拟异步处理（实际计算很快，但为了用户体验）
+            setTimeout(() => {
+                // 匹配 Skills
+                const matched = matchSkills(question, 3);
+                
+                // 生成回答
+                const answer = generateAnswer(question, matched);
+                
+                // 生成 TODO
+                const todos = generateTodos(question);
+                
+                // 保存响应
+                currentResponse = {
+                    question,
+                    matched,
+                    answer,
+                    todos
+                };
+                
+                // 显示结果
+                displayResult(currentResponse);
+                
+                // 隐藏加载，显示结果
+                document.getElementById('loadingSection').classList.remove('active');
+                document.getElementById('resultSection').classList.add('active');
+            }, 800);
+        }
+
+        // 显示结果
+        function displayResult(response) {
+            // 匹配的技能
+            const skillsContainer = document.getElementById('matchedSkills');
+            skillsContainer.innerHTML = response.matched.map(m => 
+                `<span class="skill-badge">${m.skill.name}</span>`
+            ).join('');
+
+            // 回答内容
+            const answerHtml = response.answer
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/### (.*)/g, '<h3>$1</h3>')
+                .replace(/---/g, '<hr>')
+                .replace(/\n/g, '<br>');
+            document.getElementById('answerContent').innerHTML = answerHtml;
+
+            // TODO 列表
+            const todoContainer = document.getElementById('todoList');
+            const priorityClass = {
+                'high': 'priority-high',
+                'medium': 'priority-medium',
+                'low': 'priority-low'
+            };
+            const priorityText = {
+                'high': '高',
+                'medium': '中',
+                'low': '低'
+            };
+            
+            todoContainer.innerHTML = response.todos.map((todo, i) => `
+                <li class="todo-item">
+                    <div class="todo-checkbox" onclick="toggleTodo(this, ${i})"></div>
+                    <div class="todo-content">
+                        <div class="todo-text">${todo.task}</div>
+                        <div class="todo-meta">
+                            <span class="priority ${priorityClass[todo.priority]}">
+                                ${priorityText[todo.priority]}优先级
+                            </span>
+                            <span class="time-badge">⏰ ${todo.time}</span>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // 切换 TODO 完成状态
+        function toggleTodo(checkbox, index) {
+            checkbox.classList.toggle('checked');
+        }
+
+        // 重置表单
+        function resetForm() {
+            document.getElementById('questionInput').value = '';
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('inputSection').style.display = 'block';
+            currentResponse = null;
+        }
+
+        // 导出结果
+        function exportResult() {
+            if (!currentResponse) return;
+
+            const text = `
+========================================
+智能 HR 助手 - 问题分析报告
+========================================
+
+问题：${currentResponse.question}
+
+匹配到的 Skills：
+${currentResponse.matched.map(m => `- ${m.skill.name}`).join('\n')}
+
+----------------------------------------
+专业建议
+----------------------------------------
+${currentResponse.answer.replace(/\*\*/g, '').replace(/### /g, '')}
+
+----------------------------------------
+行动清单 (TODO)
+----------------------------------------
+${currentResponse.todos.map((t, i) => `${i + 1}. [ ] ${t.task}
+   优先级: ${t.priority === 'high' ? '高' : t.priority === 'medium' ? '中' : '低'} | 时间: ${t.time}`).join('\n\n')}
+
+----------------------------------------
+生成时间：${new Date().toLocaleString()}
+基于 Andy Grove《High Output Management》
+========================================
+            `.trim();
+
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HR分析报告_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 初始化
+        loadSkills();
+    </script>
+</body>
+</html>

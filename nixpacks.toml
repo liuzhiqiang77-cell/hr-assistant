@@ -1,0 +1,8 @@
+[phases.build]
+cmds = ["pip install -r llm_assistant/backend/requirements.txt"]
+
+[phases.setup]
+nixPkgs = ["python311"]
+
+[start]
+cmd = "cd llm_assistant/backend && python main.py"
