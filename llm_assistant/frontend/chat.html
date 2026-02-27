@@ -522,12 +522,8 @@
 
     <script>
         // 配置
-        // API 基础地址 - 部署时修改此处
-        // 本地: http://localhost:8000
-        // Railway: https://your-app.railway.app
-        const API_BASE = window.location.hostname === 'localhost' 
-            ? 'http://localhost:8000' 
-            : 'https://hr-assistant-production.up.railway.app';
+        // API 基础地址 - 自动检测当前域名
+        const API_BASE = window.location.origin;
         
         // 状态
         let messages = [];

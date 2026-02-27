@@ -21,7 +21,8 @@ else:
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from hr_assistant import assistant, SkillsRAG
@@ -77,9 +78,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 静态文件服务 - 前端界面
+frontend_path = Path(__file__).parent.parent / "frontend"
+if frontend_path.exists():
+    app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
+
 
 @app.get("/")
 async def root():
+    """返回前端界面"""
+    chat_html = frontend_path / "chat.html"
+    if chat_html.exists():
+        return FileResponse(str(chat_html))
     return {
         "message": "LLM HR 助手 API",
         "version": "1.0.0",
