@@ -14,5 +14,3 @@ services:
         value: https://api.deepseek.com/v1
       - key: DEFAULT_MODEL
         value: deepseek-chat
-      - key: PYTHON_VERSION
-        value: 3.11.0
