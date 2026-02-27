@@ -1,0 +1,7 @@
+# 排除这些目录不被 Railway 检测为服务
+skills/
+streamlit_app/
+data/
+.venv/
+__pycache__/
+.git/
