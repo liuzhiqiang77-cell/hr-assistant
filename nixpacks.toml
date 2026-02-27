@@ -5,4 +5,4 @@ cmds = ["pip install -r llm_assistant/backend/requirements.txt"]
 nixPkgs = ["python311"]
 
 [start]
-cmd = "cd llm_assistant/backend && python main.py"
+cmd = "cd llm_assistant/backend && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
