@@ -10,10 +10,10 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: LLM_PROVIDER
-        value: deepseek
-      - key: DEEPSEEK_API_KEY
-        value: sk-cd5df232af6a4fc188cbdea0e889659f
-      - key: DEEPSEEK_BASE_URL
-        value: https://api.deepseek.com/v1
+        value: kimi
+      - key: KIMI_API_KEY
+        value: sk-kimi-g944cWemMxbkVjEntamPK472hFEgTCU1u52slrKLk6kXYI1KqV5Wjyj2lXZWceOQ
+      - key: KIMI_BASE_URL
+        value: https://api.moonshot.cn/v1
       - key: DEFAULT_MODEL
-        value: deepseek-chat
+        value: moonshot-v1-32k
