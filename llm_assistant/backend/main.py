@@ -122,6 +122,22 @@ async def root():
     }
 
 
+@app.get("/debug/env")
+async def debug_env():
+    """调试端点 - 查看环境变量（安全版本）"""
+    import os
+    kimi_key = os.getenv("KIMI_API_KEY", "")
+    return {
+        "render": os.getenv("RENDER"),
+        "llm_provider": os.getenv("LLM_PROVIDER"),
+        "kimi_base_url": os.getenv("KIMI_BASE_URL"),
+        "default_model": os.getenv("DEFAULT_MODEL"),
+        "kimi_key_exists": bool(kimi_key),
+        "kimi_key_length": len(kimi_key),
+        "kimi_key_prefix": kimi_key[:20] + "..." if kimi_key else None,
+    }
+
+
 @app.get("/health")
 async def health_check():
     """健康检查 - 不依赖 assistant 初始化"""
