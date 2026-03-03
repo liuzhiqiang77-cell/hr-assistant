@@ -45,27 +45,43 @@ class SkillsRAG:
     
     def load_skills(self):
         """加载 Skills 数据"""
-        if not self.skills_path.exists():
-            # 尝试其他路径（本地开发环境）
-            possible_paths = [
-                Path(__file__).parent.parent.parent / "data" / "skills.json",
-                Path.cwd() / "data" / "skills.json",
-                Path(__file__).parent.parent.parent.parent / "data" / "skills.json",
-                Path("/app/data/skills.json"),
-                Path("/opt/render/project/src/data/skills.json"),
-            ]
-            for path in possible_paths:
-                if path.exists():
-                    self.skills_path = path
-                    print(f"✅ 找到 skills 文件: {path}")
-                    break
-            else:
-                print(f"⚠️ 警告: 找不到 skills.json 文件，已尝试路径: {possible_paths}")
-                # 创建一个空的 skills 列表避免崩溃
-                self.skills = []
-                return
+        import os
+        
+        # Render 环境的特定路径
+        render_paths = [
+            Path("/opt/render/project/src/data/skills.json"),
+            Path("/app/data/skills.json"),
+        ]
+        
+        # 本地开发路径
+        local_paths = [
+            Path(__file__).parent.parent.parent / "data" / "skills.json",
+            Path.cwd() / "data" / "skills.json",
+            Path(__file__).parent.parent.parent.parent / "data" / "skills.json",
+            self.skills_path,
+        ]
+        
+        # 根据环境选择路径列表
+        if os.getenv("RENDER"):
+            possible_paths = render_paths + local_paths
+            print(f"🔍 Render 环境，查找 skills.json...")
         else:
-            print(f"✅ 使用默认路径: {self.skills_path}")
+            possible_paths = local_paths + render_paths
+        
+        found_path = None
+        for path in possible_paths:
+            print(f"  尝试: {path} (exists: {path.exists()})")
+            if path.exists():
+                found_path = path
+                break
+        
+        if not found_path:
+            print(f"⚠️ 警告: 找不到 skills.json 文件")
+            self.skills = []
+            return
+        
+        self.skills_path = found_path
+        print(f"✅ 找到 skills 文件: {found_path}")
         
         with open(self.skills_path, 'r', encoding='utf-8') as f:
             data = json.load(f)

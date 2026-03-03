@@ -27,7 +27,16 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from hr_assistant import assistant, SkillsRAG
+# 延迟导入 assistant，避免启动时卡住
+from hr_assistant import SkillsRAG
+assistant = None
+
+def get_assistant():
+    global assistant
+    if assistant is None:
+        from hr_assistant import assistant as _assistant
+        assistant = _assistant
+    return assistant
 
 
 # 请求模型
@@ -57,9 +66,17 @@ class TodoItem(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    import os
     print("🚀 启动 HR 助手后端...")
+    print(f"📂 当前工作目录: {os.getcwd()}")
+    print(f"🔧 环境: {'Render' if os.getenv('RENDER') else 'Local'}")
     # 预加载 skills
-    print(f"✅ 已加载 {len(assistant.rag.skills)} 个 skills")
+    try:
+        from hr_assistant import assistant
+        skills_count = len(assistant.rag.skills)
+        print(f"✅ 已加载 {skills_count} 个 skills")
+    except Exception as e:
+        print(f"⚠️ 加载 skills 时出错: {e}")
     yield
     print("👋 关闭服务")
 
@@ -107,16 +124,23 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """健康检查 - 不依赖 assistant 初始化"""
+    try:
+        _assistant = get_assistant()
+        skills_count = len(_assistant.rag.skills) if _assistant else 0
+    except:
+        skills_count = 0
     return {
         "status": "healthy",
-        "skills_loaded": len(assistant.rag.skills)
+        "skills_loaded": skills_count
     }
 
 
 @app.get("/skills")
 async def get_skills(category: Optional[str] = None, search: Optional[str] = None, limit: int = 20):
     """获取 Skills 列表"""
-    skills = assistant.rag.skills
+    _assistant = get_assistant()
+    skills = _assistant.rag.skills
     
     if category:
         skills = [s for s in skills if s.category == category]
@@ -141,8 +165,9 @@ async def get_skills(category: Optional[str] = None, search: Optional[str] = Non
 @app.get("/skills/categories")
 async def get_categories():
     """获取所有分类"""
+    _assistant = get_assistant()
     categories = {}
-    for skill in assistant.rag.skills:
+    for skill in _assistant.rag.skills:
         cat = skill.category
         categories[cat] = categories.get(cat, 0) + 1
     return categories
@@ -152,12 +177,13 @@ async def get_categories():
 async def chat(request: ChatRequest):
     """非流式对话"""
     try:
+        _assistant = get_assistant()
         # 获取相关 skills
-        relevant_skills = assistant.rag.search(request.message, top_k=3)
+        relevant_skills = _assistant.rag.search(request.message, top_k=3)
         
         # 调用 LLM
         response_text = ""
-        async for chunk in assistant.chat(
+        async for chunk in _assistant.chat(
             request.message, 
             request.history, 
             stream=False
@@ -182,9 +208,10 @@ async def chat(request: ChatRequest):
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """流式对话"""
+    _assistant = get_assistant()
     async def generate():
         try:
-            async for chunk in assistant.chat(
+            async for chunk in _assistant.chat(
                 request.message, 
                 request.history, 
                 stream=True
@@ -203,15 +230,17 @@ async def chat_stream(request: ChatRequest):
 @app.post("/todos")
 async def generate_todos(request: TodoRequest):
     """生成 TODO 清单"""
-    todos = await assistant.get_todos(request.context)
+    _assistant = get_assistant()
+    todos = await _assistant.get_todos(request.context)
     return {"todos": todos}
 
 
 @app.get("/stats")
 async def get_stats():
     """获取统计信息"""
+    _assistant = get_assistant()
     categories = {}
-    for skill in assistant.rag.skills:
+    for skill in _assistant.rag.skills:
         cat = skill.category
         categories[cat] = categories.get(cat, 0) + 1
     
