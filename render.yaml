@@ -3,17 +3,25 @@ services:
     name: hr-assistant
     runtime: python
     plan: free
-    pythonVersion: "3.11.11"
-    buildCommand: "pip install -r requirements.txt && pip install -r llm_assistant/backend/requirements.txt"
-    startCommand: "cd llm_assistant/backend && PYTHONPATH=$(pwd) python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+    region: oregon
+    pythonVersion: "3.11"
+    buildCommand: |
+      pip install -r requirements.txt
+      pip install -r llm_assistant/backend/requirements.txt
+    startCommand: |
+      export PYTHONPATH=/opt/render/project/src:/app:$PYTHONPATH
+      cd llm_assistant/backend
+      uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11.11"
+        value: "3.11"
       - key: LLM_PROVIDER
         value: kimi
       - key: KIMI_API_KEY
-        value: sk-kimi-g944cWemMxbkVjEntamPK472hFEgTCU1u52slrKLk6kXYI1KqV5Wjyj2lXZWceOQ
+        sync: false  # 在 Render Dashboard 中设置
       - key: KIMI_BASE_URL
         value: https://api.moonshot.cn/v1
       - key: DEFAULT_MODEL
         value: moonshot-v1-32k
+    autoDeploy: true
