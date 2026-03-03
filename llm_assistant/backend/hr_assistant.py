@@ -187,6 +187,12 @@ class LLMHRAssistant:
         # 检测 LLM 提供商
         provider = os.getenv("LLM_PROVIDER", "kimi").lower()
         
+        # 调试：打印所有环境变量（隐藏敏感信息）
+        print(f"🔧 DEBUG: LLM_PROVIDER={provider}")
+        print(f"🔧 DEBUG: KIMI_API_KEY exists={bool(os.getenv('KIMI_API_KEY'))}")
+        print(f"🔧 DEBUG: KIMI_API_KEY length={len(os.getenv('KIMI_API_KEY', ''))}")
+        print(f"🔧 DEBUG: RENDER={os.getenv('RENDER')}")
+        
         if provider == "deepseek":
             # DeepSeek 配置
             api_key = os.getenv("DEEPSEEK_API_KEY")
@@ -208,6 +214,7 @@ class LLMHRAssistant:
         
         # 如果环境变量没有，尝试从 .env 文件加载
         if not api_key:
+            print(f"⚠️ 环境变量中没有 {provider_name} API Key，尝试从 .env 文件加载...")
             env_path = Path(__file__).parent / ".env"
             if env_path.exists():
                 with open(env_path) as f:
@@ -220,7 +227,7 @@ class LLMHRAssistant:
         if not api_key:
             print(f"⚠️ 警告: {provider_name} API Key 未设置，LLM 功能将不可用")
         else:
-            print(f"✅ 使用 {provider_name} API")
+            print(f"✅ 使用 {provider_name} API (key长度: {len(api_key)})")
         
         self.client = AsyncOpenAI(
             api_key=api_key,
