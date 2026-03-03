@@ -11,11 +11,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# 加载 .env 文件
+# 加载 .env 文件（仅在本地开发环境，Render 使用环境变量）
 env_path = Path(__file__).parent / ".env"
-if env_path.exists():
+if env_path.exists() and not os.getenv("RENDER"):
     load_dotenv(env_path)
     print(f"✅ 已加载 .env 文件: {env_path}")
+elif os.getenv("RENDER"):
+    print(f"✅ 运行在 Render 环境，使用环境变量")
 else:
     print(f"⚠️ 未找到 .env 文件: {env_path}")
 

@@ -15,7 +15,12 @@ import yaml
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
-load_dotenv()
+# 只在环境变量未设置时尝试从 .env 文件加载
+if not os.getenv("KIMI_API_KEY") and not os.getenv("DEEPSEEK_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✅ 从 .env 文件加载配置: {env_path}")
 
 
 @dataclass

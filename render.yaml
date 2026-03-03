@@ -16,6 +16,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
+      - key: RENDER
+        value: "true"
       - key: LLM_PROVIDER
         value: kimi
       - key: KIMI_API_KEY
