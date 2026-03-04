@@ -13,14 +13,6 @@ from collections import Counter
 import yaml
 
 from openai import AsyncOpenAI
-from dotenv import load_dotenv
-
-# 只在环境变量未设置时尝试从 .env 文件加载
-if not os.getenv("KIMI_API_KEY") and not os.getenv("DEEPSEEK_API_KEY") and not os.getenv("OPENAI_API_KEY"):
-    env_path = Path(__file__).parent / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-        print(f"✅ 从 .env 文件加载配置: {env_path}")
 
 
 @dataclass
@@ -70,7 +62,6 @@ class SkillsRAG:
         
         found_path = None
         for path in possible_paths:
-            print(f"  尝试: {path} (exists: {path.exists()})")
             if path.exists():
                 found_path = path
                 break
@@ -184,56 +175,47 @@ class LLMHRAssistant:
     def __init__(self):
         self.rag = SkillsRAG()
         
+        # 强制重新读取环境变量（Render 环境变量可能在导入后才设置）
+        self._reload_env_from_file()
+        
         # 检测 LLM 提供商
         provider = os.getenv("LLM_PROVIDER", "kimi").lower()
         
         # 调试：打印所有环境变量（隐藏敏感信息）
+        kimi_key = os.getenv("KIMI_API_KEY", "")
         print(f"🔧 DEBUG: LLM_PROVIDER={provider}")
-        print(f"🔧 DEBUG: KIMI_API_KEY exists={bool(os.getenv('KIMI_API_KEY'))}")
-        print(f"🔧 DEBUG: KIMI_API_KEY length={len(os.getenv('KIMI_API_KEY', ''))}")
+        print(f"🔧 DEBUG: KIMI_API_KEY exists={bool(kimi_key)}")
+        print(f"🔧 DEBUG: KIMI_API_KEY length={len(kimi_key)}")
         print(f"🔧 DEBUG: RENDER={os.getenv('RENDER')}")
         
         if provider == "deepseek":
-            # DeepSeek 配置
             api_key = os.getenv("DEEPSEEK_API_KEY")
             base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
             default_model = "deepseek-chat"
             provider_name = "DeepSeek"
         elif provider == "openai":
-            # OpenAI 配置
             api_key = os.getenv("OPENAI_API_KEY")
             base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
             default_model = "gpt-3.5-turbo"
             provider_name = "OpenAI"
         else:
-            # Kimi 默认配置
-            api_key = os.getenv("KIMI_API_KEY")
+            api_key = kimi_key
             base_url = os.getenv("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
             default_model = "moonshot-v1-8k"
             provider_name = "Kimi"
         
-        # 如果环境变量没有，尝试从 .env 文件加载
-        if not api_key:
-            print(f"⚠️ 环境变量中没有 {provider_name} API Key，尝试从 .env 文件加载...")
-            env_path = Path(__file__).parent / ".env"
-            if env_path.exists():
-                with open(env_path) as f:
-                    for line in f:
-                        if provider == "deepseek" and line.startswith("DEEPSEEK_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-                        elif provider == "kimi" and line.startswith("KIMI_API_KEY="):
-                            api_key = line.strip().split("=", 1)[1]
-        
         if not api_key:
             print(f"⚠️ 警告: {provider_name} API Key 未设置，LLM 功能将不可用")
+            # 创建一个假的客户端，会报错但服务不会崩溃
+            self.client = None
+            self.model = default_model
         else:
             print(f"✅ 使用 {provider_name} API (key长度: {len(api_key)})")
-        
-        self.client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url
-        )
-        self.model = os.getenv("DEFAULT_MODEL", default_model)
+            self.client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url
+            )
+            self.model = os.getenv("DEFAULT_MODEL", default_model)
         
         # System prompt 模板
         self.system_template = """你是「初级 HR 助手」，一位专业的 HR 和管理学顾问。
@@ -255,6 +237,19 @@ class LLMHRAssistant:
 {skills_context}
 
 请基于以上知识，回答用户的问题。如果用户问题不够具体，请主动询问更多细节。"""
+    
+    def _reload_env_from_file(self):
+        """尝试从 .env 文件重新加载环境变量（仅作为后备）"""
+        from dotenv import load_dotenv
+        
+        # 如果关键环境变量已存在，不需要重新加载
+        if os.getenv("KIMI_API_KEY") or os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY"):
+            return
+        
+        env_path = Path(__file__).parent / ".env"
+        if env_path.exists():
+            print(f"📝 从 .env 文件加载配置: {env_path}")
+            load_dotenv(env_path, override=True)
     
     def _format_skills_context(self, skills: List[Skill]) -> str:
         """格式化 Skills 上下文"""
@@ -278,15 +273,11 @@ class LLMHRAssistant:
     ) -> AsyncGenerator[str, None]:
         """
         对话主函数
-        
-        Args:
-            user_message: 用户消息
-            conversation_history: 对话历史 [("user", msg), ("assistant", msg), ...]
-            stream: 是否流式输出
-            
-        Yields:
-            生成的文本片段
         """
+        if self.client is None:
+            yield "抱歉，LLM API 未配置。请检查 KIMI_API_KEY 或 DEEPSEEK_API_KEY 环境变量。"
+            return
+        
         # 1. 检索相关 Skills
         relevant_skills = self.rag.search(user_message, top_k=3)
         
@@ -328,18 +319,15 @@ class LLMHRAssistant:
                 yield response.choices[0].message.content
                 
         except Exception as e:
-            yield f"抱歉，调用 LLM 时出错：{str(e)}\n\n请检查 KIMI_API_KEY 是否配置正确。"
+            yield f"抱歉，调用 LLM 时出错：{str(e)}\n\n请检查 API Key 是否配置正确。"
     
     async def get_todos(self, context: str) -> List[Dict]:
         """
         基于对话内容生成 TODO 清单
-        
-        Args:
-            context: 对话上下文
-            
-        Returns:
-            TODO 列表
         """
+        if self.client is None:
+            return []
+        
         prompt = f"""基于以下对话内容，为用户生成一个具体的 TODO 行动清单。
 
 对话内容：
@@ -379,5 +367,15 @@ class LLMHRAssistant:
             return []
 
 
-# 全局实例
-assistant = LLMHRAssistant()
+# 全局实例 - 延迟初始化
+_assistant_instance = None
+
+def get_assistant_instance():
+    """获取或创建 assistant 实例"""
+    global _assistant_instance
+    if _assistant_instance is None:
+        _assistant_instance = LLMHRAssistant()
+    return _assistant_instance
+
+# 为了兼容性，保留旧的导入方式
+assistant = get_assistant_instance()

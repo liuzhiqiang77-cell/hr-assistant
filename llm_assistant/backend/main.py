@@ -27,16 +27,8 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-# 延迟导入 assistant，避免启动时卡住
-from hr_assistant import SkillsRAG
-assistant = None
-
-def get_assistant():
-    global assistant
-    if assistant is None:
-        from hr_assistant import assistant as _assistant
-        assistant = _assistant
-    return assistant
+# 导入 assistant
+from hr_assistant import SkillsRAG, get_assistant_instance as get_assistant
 
 
 # 请求模型
@@ -72,8 +64,8 @@ async def lifespan(app: FastAPI):
     print(f"🔧 环境: {'Render' if os.getenv('RENDER') else 'Local'}")
     # 预加载 skills
     try:
-        from hr_assistant import assistant
-        skills_count = len(assistant.rag.skills)
+        _assistant = get_assistant()
+        skills_count = len(_assistant.rag.skills)
         print(f"✅ 已加载 {skills_count} 个 skills")
     except Exception as e:
         print(f"⚠️ 加载 skills 时出错: {e}")
@@ -162,7 +154,7 @@ async def get_skills(category: Optional[str] = None, search: Optional[str] = Non
         skills = [s for s in skills if s.category == category]
     
     if search:
-        skills = assistant.rag.search(search, top_k=limit)
+        skills = _assistant.rag.search(search, top_k=limit)
     
     return {
         "total": len(skills),
@@ -261,7 +253,7 @@ async def get_stats():
         categories[cat] = categories.get(cat, 0) + 1
     
     return {
-        "total_skills": len(assistant.rag.skills),
+        "total_skills": len(_assistant.rag.skills),
         "categories": categories,
         "api_configured": bool(os.getenv("KIMI_API_KEY") or os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY"))
     }
